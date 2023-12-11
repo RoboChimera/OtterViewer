@@ -2,70 +2,71 @@
 #include <stdio.h>
 #include <gtk/gtk.h>
 
-int hasOpened = 0;
+int hasScaled = 0;
+int width, height;
 
-static gboolean on_configure_event(GtkWidget *window, GdkEventConfigure *event, gpointer user_data) {
-	int windowWidth = event->width;
-	int windowHeight = event->height;
-	int minWidth;
-	int minHeight;
+void button_clicked(GtkWidget *widget, gpointer data) {
+	const gchar *entry = gtk_entry_get_text(GTK_ENTRY(data));
+	float scale = atof(entry);
 
-	GtkWidget *image = GTK_WIDGET(user_data);
+	GtkWidget *image = g_object_get_data(G_OBJECT(widget), "image");
+	GdkPixbuf *imgBuf = gtk_image_get_pixbuf(GTK_IMAGE(image));
 
-	const GdkPixbuf *imgPixBuf = gtk_image_get_pixbuf(GTK_IMAGE(image));
-
-	double scaleWidth = (double)windowWidth / gdk_pixbuf_get_width(imgPixBuf);
-	double scaleHeight = (double)windowHeight / gdk_pixbuf_get_height(imgPixBuf);
-
-	/*
-	if (hasOpened == 0) {
-		minWidth = event->width;
-		minHeight = event->height;
-		hasOpened = 1;
-		g_print("%i", hasOpened);
+	int debug1 = gdk_pixbuf_get_width(imgBuf);
+	if (hasScaled == 0) {
+		width = gdk_pixbuf_get_width(imgBuf);
+		height = gdk_pixbuf_get_height(imgBuf);
+		g_print("%ix%i\n", width, height);
+		hasScaled = 1;
 	}
-	*/
 
-	// Use nearest-neighbor algorithm for scaling
-	GdkPixbuf *scaledPixBuf = gdk_pixbuf_scale_simple(
-			imgPixBuf,
-			windowWidth, windowHeight,
-			GDK_INTERP_NEAREST
+	int scaledWidth = width * scale;
+	int scaledHeight = height * scale;
+
+	GdkPixbuf *scaleBuf = gdk_pixbuf_scale_simple(
+		imgBuf,
+		scaledWidth, scaledHeight,
+		GDK_INTERP_NEAREST
 	);
 
+	gtk_image_set_from_pixbuf(GTK_IMAGE(image), scaleBuf);
+	g_object_unref(scaleBuf);
 
-	//if (windowWidth > minWidth || windowHeight > minHeight) {
-		gtk_image_set_from_pixbuf(GTK_IMAGE(image), scaledPixBuf);
-		gtk_widget_set_size_request(image, scaleWidth, scaleHeight);
-		gtk_window_resize(GTK_WINDOW(window), windowWidth, windowHeight);
-		g_print("Window size changed to %ix%i\n", windowWidth, windowHeight);
-	//}
-
-	return TRUE;
+	g_print("%.2f\n", scale);
 }
 
 int main(int argc, char *argv[]) {
-	GtkWidget *window, *grid, *image;
+	GtkWidget *window, *grid, *image, *scale, *button;
 	gtk_init(&argc, &argv);
 
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(window), "OtterViewer");
-	//gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
+	gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
 
 	grid = gtk_grid_new();
 
 	g_signal_connect(G_OBJECT(window), "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
 	if (argv[1] != NULL) {
+		// Create the Image
 		image = gtk_image_new_from_file(argv[1]);
 		printf("%s\n", argv[1]);
-		gtk_grid_attach(GTK_GRID(grid), image, 0, 0, 1, 1);
-		const GdkPixbuf *imgPixBuf = gtk_image_get_pixbuf(GTK_IMAGE(image));
-		printf("%ux%u\n", gdk_pixbuf_get_width(imgPixBuf), gdk_pixbuf_get_height(imgPixBuf));
-		//gtk_window_set_default_size(GTK_WINDOW(window), gdk_pixbuf_get_width(imgPixBuf), gdk_pixbuf_get_height(imgPixBuf));
 
-		g_signal_connect(G_OBJECT(window), "configure-event", G_CALLBACK(on_configure_event), image);
-		//gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
+		// Create the input box for scaling
+		GtkWidget *scale = gtk_entry_new();
+		gtk_entry_set_placeholder_text(GTK_ENTRY(scale), "1.0");
+
+		// Create the button
+		GtkWidget *button = gtk_button_new_with_label("Scale");
+		g_signal_connect(button, "clicked", G_CALLBACK(button_clicked), scale);
+
+		// Add Everything to the grid
+		gtk_grid_attach(GTK_GRID(grid), image, 0, 0, 1, 1);
+		gtk_grid_attach(GTK_GRID(grid), scale, 0, 1, 1, 1);
+		gtk_grid_attach(GTK_GRID(grid), button, 1, 1, 1, 1);
+
+		g_object_set_data(G_OBJECT(button), "image", image);
+
 
 		gtk_container_add(GTK_CONTAINER(window), grid);
 		gtk_widget_show_all(window);
