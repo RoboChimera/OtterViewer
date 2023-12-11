@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
 		int imageWidth = gdk_pixbuf_get_width(imgBuf);
 		int imageHeight = gdk_pixbuf_get_height(imgBuf);
 
-		while (screenWidth < imageWidth || screenHeight < imageHeight) {
+		while (screenWidth - 24 < imageWidth || screenHeight - 24 < imageHeight) {
 			imageWidth = gdk_pixbuf_get_width(imgBuf) / 2;
 			imageHeight = gdk_pixbuf_get_height(imgBuf) / 2;
 			GdkPixbuf *scaleBuf = gdk_pixbuf_scale_simple(
