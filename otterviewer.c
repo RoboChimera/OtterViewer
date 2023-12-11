@@ -16,7 +16,6 @@ void button_clicked(GtkWidget *widget, gpointer data) {
 	if (hasScaled == 0) {
 		width = gdk_pixbuf_get_width(imgBuf);
 		height = gdk_pixbuf_get_height(imgBuf);
-		g_print("%ix%i\n", width, height);
 		hasScaled = 1;
 	}
 
@@ -31,13 +30,17 @@ void button_clicked(GtkWidget *widget, gpointer data) {
 
 	gtk_image_set_from_pixbuf(GTK_IMAGE(image), scaleBuf);
 	g_object_unref(scaleBuf);
-
-	g_print("%.2f\n", scale);
+	g_print("%.2f: %ix%i\n", scale, scaledWidth, scaledHeight);
 }
 
 int main(int argc, char *argv[]) {
 	GtkWidget *window, *grid, *image, *scale, *button;
 	gtk_init(&argc, &argv);
+
+	GdkScreen *screen = gdk_screen_get_default();
+
+	gint screenWidth = gdk_screen_get_width(screen);
+	gint screenHeight = gdk_screen_get_height(screen);
 
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(window), "OtterViewer");
@@ -50,7 +53,23 @@ int main(int argc, char *argv[]) {
 	if (argv[1] != NULL) {
 		// Create the Image
 		image = gtk_image_new_from_file(argv[1]);
-		printf("%s\n", argv[1]);
+		GdkPixbuf *imgBuf = gtk_image_get_pixbuf(GTK_IMAGE(image));
+
+		int imageWidth = gdk_pixbuf_get_width(imgBuf);
+		int imageHeight = gdk_pixbuf_get_height(imgBuf);
+
+		while (screenWidth < imageWidth || screenHeight < imageHeight) {
+			imageWidth = gdk_pixbuf_get_width(imgBuf) / 2;
+			imageHeight = gdk_pixbuf_get_height(imgBuf) / 2;
+			GdkPixbuf *scaleBuf = gdk_pixbuf_scale_simple(
+				imgBuf,
+				imageWidth, imageHeight,
+				GDK_INTERP_NEAREST
+			);
+
+			g_print("%ix%i\n", imageWidth, imageHeight);
+			gtk_image_set_from_pixbuf(GTK_IMAGE(image), scaleBuf);
+		}
 
 		// Create the input box for scaling
 		GtkWidget *scale = gtk_entry_new();
